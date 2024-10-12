@@ -60,7 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         'quality' => $quality,
                     ];
                 } else {
-                    echo "<p>No data found for style number: " . htmlspecialchars($styleNumber) . "</p>";
+                    echo "<p class='alert alert-danger'>No data found for style number: " . htmlspecialchars($styleNumber) . "</p>";
                 }
             }
         }
@@ -83,10 +83,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             fputcsv($output, [
                 'Style No',
                 'Fac-Style No',
-                'Gold Wt(g)',
-                'Total Stone Qty',
-                'Total Stone Wt (ct)',
-                'Stone Details',
+                'Gold-Wt(g)',
+                'Total-Stone-Qty',
+                'Total-Stone-t (ct)',
+                'Stone-Type',
+                'Stone-Quantity',
+                'Stone-Size',
+                'Stone-Weight',
                 'Gold',
                 'Qty',
                 'PO',
@@ -100,30 +103,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if ($data) {
                     // Prepare stone details for CSV
                     $stones = json_decode($data['stones'], true);
-                    $stoneDetails = [];
 
-                    if (!empty($stones) && is_array($stones)) {
-                        foreach ($stones as $stone) {
-                            $stoneType = htmlspecialchars($stone['stone_type'] ?? 'N/A');
-                            $stoneQty = htmlspecialchars($stone['quantity'] ?? 'N/A');
-                            $stoneSize = htmlspecialchars($stone['size'] ?? 'N/A');
-                            $stoneWeight = htmlspecialchars($stone['weight'] ?? 'N/A');
-
-                            $stoneDetails[] = "{$stoneType} (Qty: {$stoneQty}, Size: {$stoneSize}, Wt: {$stoneWeight} ct)";
-                        }
-                    }
-
-                    // Join stone details into a single string
-                    $stoneDetailsStr = implode('; ', $stoneDetails);
-
-                    // Write the data to the CSV
+                    // Write the main bangle data for the first stone
                     fputcsv($output, [
                         htmlspecialchars($data['style_number']),
                         htmlspecialchars($data['factory_style_number']),
                         htmlspecialchars($data['gold_weight']),
                         htmlspecialchars($data['total_stone_qty']),
                         htmlspecialchars($data['total_stone_weight']),
-                        $stoneDetailsStr,
+                        htmlspecialchars($stones[0]['stone_type'] ?? 'N/A'),
+                        htmlspecialchars($stones[0]['quantity'] ?? 'N/A'),
+                        htmlspecialchars($stones[0]['size'] ?? 'N/A'),
+                        htmlspecialchars($stones[0]['weight'] ?? 'N/A'),
                         htmlspecialchars($data['submitted']['gold_weight']),
                         htmlspecialchars($data['submitted']['quantity']),
                         htmlspecialchars($data['submitted']['po']),
@@ -131,6 +122,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         htmlspecialchars($data['submitted']['size']),
                         htmlspecialchars($data['submitted']['quality']),
                     ]);
+
+                    // Write additional stone details in new rows
+                    for ($i = 1; $i < count($stones); $i++) {
+                        fputcsv($output, [
+                            '', '', '', '', '', // Leave first columns empty
+                            htmlspecialchars($stones[$i]['stone_type'] ?? 'N/A'),
+                            htmlspecialchars($stones[$i]['quantity'] ?? 'N/A'),
+                            htmlspecialchars($stones[$i]['size'] ?? 'N/A'),
+                            htmlspecialchars($stones[$i]['weight'] ?? 'N/A'),
+                            '', '', '', '', '', // Leave last columns empty
+                        ]);
+                    }
+
+                    // Add a blank row between different styles
+                    fputcsv($output, ['', '', '', '', '', '', '', '', '', '', '', '', '', '']);
                 }
             }
 
@@ -152,27 +158,38 @@ $result = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diamond Requirement Form</title>
+    <title>Diamond Requirement Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            background-color: #f8f9fa;
         }
-        table {
-            border-collapse: collapse;
-            width: 100%;
+        .sidebar {
+            height: 100vh;
+            background: #343a40;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: white;
+            padding: 10px;
+            text-decoration: none;
+            display: block;
+        }
+        .sidebar a:hover {
+            background: #575d63;
+        }
+        .content {
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #343a40;
+        }
+        .card {
             margin-top: 20px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        h1, h2, h3 {
-            color: #333;
+        .table th, .table td {
+            vertical-align: middle;
         }
         .style-entry {
             margin-bottom: 15px;
@@ -184,147 +201,208 @@ $result = $conn->query($sql);
 </head>
 <body>
 
-<h1>Diamond Requirement Form</h1>
-<form method="post" action="">
-    <div id="style-entries">
-        <div class="style-entry">
-            <label for="style_number">Style Number:</label>
-            <input type="text" name="style_number[]" required>
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-2 sidebar">
+            <h2 class="text-white">Dashboard</h2>
+            <a href="index.php">Home</a>
+    <a href="addbangle.php">Add Bangle</a>
+    <a href="view.php">All bangles</a>
+    <a href="req.php">Diamond requirement</a>
+        </nav>
+        
+        <main class="col-md-9 content">
+            <h1>Diamond Requirement Dashboard</h1>
+            <div class="card">
+                <div class="card-header">
+                    <h5>Submit Diamond Requirements</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="">
+                        <div id="style-entries">
+                            <div class="style-entry">
+                                <label for="style_number">Style Number:</label>
+                                <input type="text" name="style_number[]" class="form-control" required>
 
-            <label for="gold_weight">Gold Weight:</label>
-            <input type="text" name="gold_weight[]" required>
+                                <label for="gold_weight" class="mt-2">Gold:</label>
+                                <select name="gold_weight[]" class="form-control" required>
+                                    <option value="">Select Gold Type</option>
+                                    <option value="14KY">14KY</option>
+                                    <option value="14KW">14KW</option>
+                                    <option value="14KR">14KR</option>
+                                    <option value="14TT">14TT</option>
+                                    <option value="18KY">18KY</option>
+                                    <option value="18KW">18KW</option>
+                                    <option value="18KR">18KR</option>
+                                    <option value="18K-TT">18K-TT</option>
+                                    <option value="PT-950">PT-950</option>
+                                </select>
 
-            <label for="quantity">Quantity:</label>
-            <input type="text" name="quantity[]" required>
+                                <label for="quantity" class="mt-2">Quantity:</label>
+                                <input type="text" name="quantity[]" class="form-control" required>
 
-            <label for="po">Purchase Order (PO):</label>
-            <input type="text" name="po[]" required>
+                                <label for="po" class="mt-2">Purchase Order (PO):</label>
+                                <input type="text" name="po[]" class="form-control" required>
 
-            <label for="factory">Factory:</label>
-            <input type="text" name="factory[]" required>
+                                <label for="factory" class="mt-2">Factory:</label>
+                                <input type="text" name="factory[]" class="form-control" required>
 
-            <label for="size">Size:</label>
-            <input type="text" name="size[]" required>
+                                <label for="size" class="mt-2">Size:</label>
+                                <input type="text" name="size[]" class="form-control" required>
 
-            <label for="quality">Quality:</label>
-            <input type="text" name="quality[]" required>
-        </div>
+                                <label for="quality" class="mt-2">Quality:</label>
+                                <select name="quality[]" class="form-control" required>
+                                    <option value="">Select Quality</option>
+                                    <option value="Natural">Natural</option>
+                                    <option value="Labgrown">Labgrown</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="button" id="add-style" class="btn btn-secondary mt-3">Add Another Style</button>
+                        <button type="submit" class="btn btn-primary mt-3">Submit</button>
+                    </form>
+
+                    <!-- Reset Button -->
+                    <form method="post" action="" style="margin-top: 20px;">
+                        <button type="submit" name="reset" class="btn btn-warning">Reset Form</button>
+                    </form>
+                </div>
+            </div>
+
+            <?php if (!empty($_SESSION['bangleData'])): ?>
+                <?php foreach ($_SESSION['bangleData'] as $index => $data): ?>
+                    <?php if ($data): ?>
+                        <h2>Details for Style Number: <?php echo htmlspecialchars($data['style_number']); ?></h2>
+                        <div class="card">
+                            <div class="card-body">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th>Style No</th>
+                                        <th>Fac-Style No</th>
+                                        <th>Gold Wt(g)</th>
+                                        <th>Total Stone Qty</th>
+                                        <th>Total Stone Wt (ct)</th>
+                                        <th>Stone Details</th>
+                                        <th>Gold</th>
+                                        <th>Qty</th>
+                                        <th>PO</th>
+                                        <th>Factory</th>
+                                        <th>Size</th>
+                                        <th>Quality</th>
+                                    </tr>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($data['style_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['factory_style_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['gold_weight']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['total_stone_qty']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['total_stone_weight']); ?></td>
+                                        <td>
+                                            <?php
+                                            // Decode the JSON for stone details
+                                            $stones = json_decode($data['stones'], true);
+                                            $stoneDetails = '';
+
+                                            // Prepare the stone details for display
+                                            if (!empty($stones) && is_array($stones)) {
+                                                $stoneDetails .= '<table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Stone Type</th>
+                                                            <th>Quantity</th>
+                                                            <th>Size</th>
+                                                            <th>Weight (ct)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>';
+
+                                                foreach ($stones as $stone) {
+                                                    $stoneType = htmlspecialchars($stone['stone_type'] ?? 'N/A');
+                                                    $stoneQty = htmlspecialchars($stone['quantity'] ?? 'N/A');
+                                                    $stoneSize = htmlspecialchars($stone['size'] ?? 'N/A');
+                                                    $stoneWeight = htmlspecialchars($stone['weight'] ?? 'N/A');
+
+                                                    // Append each stone's details to the stoneDetails table
+                                                    $stoneDetails .= "<tr>
+                                                        <td>{$stoneType}</td>
+                                                        <td>{$stoneQty}</td>
+                                                        <td>{$stoneSize}</td>
+                                                        <td>{$stoneWeight}</td>
+                                                      </tr>";
+                                                }
+                                                $stoneDetails .= '</tbody></table>';
+                                            } else {
+                                                $stoneDetails = 'No stone details available';
+                                            }
+
+                                            // Display stone details
+                                            echo $stoneDetails;
+                                            ?>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($data['submitted']['gold_weight']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['submitted']['quantity']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['submitted']['po']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['submitted']['factory']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['submitted']['size']); ?></td>
+                                        <td><?php echo htmlspecialchars($data['submitted']['quality']); ?></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <p>No details found for the entered style number: <strong><?php echo htmlspecialchars($data['style_number']); ?></strong>.</p>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <form method="post" action="">
+                <button type="submit" name="export_csv" class="btn btn-success mt-3">Export to CSV</button>
+            </form>
+        </main>
     </div>
-    <button type="button" id="add-style">Add Another Style</button>
-    <button type="submit">Submit</button>
-</form>
-
-<!-- Reset Button -->
-<form method="post" action="" style="margin-top: 20px;">
-    <button type="submit" name="reset">Reset Form</button>
-</form>
-
-<?php if (!empty($_SESSION['bangleData'])): ?>
-    <?php foreach ($_SESSION['bangleData'] as $index => $data): ?>
-        <?php if ($data): ?>
-            <h2>Details for Style Number: <?php echo htmlspecialchars($data['style_number']); ?></h2>
-            <table>
-                <tr>
-                    <th>Style No</th>
-                    <th>Fac-Style No</th>
-                    <th>Gold Wt(g)</th>
-                    <th>Total Stone Qty</th>
-                    <th>Total Stone Wt (ct)</th>
-                    <th>Stone Details</th>
-                    <th>Gold</th>
-                    <th>Qty</th>
-                    <th>PO</th>
-                    <th>Factory</th>
-                    <th>Size</th>
-                    <th>Quality</th>
-                </tr>
-                <tr>
-                    <td><?php echo htmlspecialchars($data['style_number']); ?></td>
-                    <td><?php echo htmlspecialchars($data['factory_style_number']); ?></td>
-                    <td><?php echo htmlspecialchars($data['gold_weight']); ?></td>
-                    <td><?php echo htmlspecialchars($data['total_stone_qty']); ?></td>
-                    <td><?php echo htmlspecialchars($data['total_stone_weight']); ?></td>
-                    <td>
-                        <?php
-                        // Decode the JSON for stone details
-                        $stones = json_decode($data['stones'], true);
-                        $stoneDetails = '';
-
-                        // Prepare the stone details for display
-                        if (!empty($stones) && is_array($stones)) {
-                            $stoneDetails .= '<table border="1" cellspacing="0" cellpadding="5">
-                                                <tr>
-                                                    <th>Stone Type</th>
-                                                    <th>Quantity</th>
-                                                    <th>Size</th>
-                                                    <th>Weight (ct)</th>
-                                                </tr>';
-
-                            foreach ($stones as $stone) {
-                                $stoneType = htmlspecialchars($stone['stone_type'] ?? 'N/A');
-                                $stoneQty = htmlspecialchars($stone['quantity'] ?? 'N/A');
-                                $stoneSize = htmlspecialchars($stone['size'] ?? 'N/A');
-                                $stoneWeight = htmlspecialchars($stone['weight'] ?? 'N/A');
-
-                                // Append each stone's details to the stoneDetails table
-                                $stoneDetails .= "<tr>
-                                                    <td>{$stoneType}</td>
-                                                    <td>{$stoneQty}</td>
-                                                    <td>{$stoneSize}</td>
-                                                    <td>{$stoneWeight}</td>
-                                                  </tr>";
-                            }
-                            $stoneDetails .= '</table>';
-                        } else {
-                            $stoneDetails = 'No stone details available';
-                        }
-
-                        // Display stone details
-                        echo $stoneDetails;
-                        ?>
-                    </td>
-                    <td><?php echo htmlspecialchars($data['submitted']['gold_weight']); ?></td>
-                    <td><?php echo htmlspecialchars($data['submitted']['quantity']); ?></td>
-                    <td><?php echo htmlspecialchars($data['submitted']['po']); ?></td>
-                    <td><?php echo htmlspecialchars($data['submitted']['factory']); ?></td>
-                    <td><?php echo htmlspecialchars($data['submitted']['size']); ?></td>
-                    <td><?php echo htmlspecialchars($data['submitted']['quality']); ?></td>
-                </tr>
-            </table>
-        <?php else: ?>
-            <p>No details found for the entered style number: <strong><?php echo htmlspecialchars($data['style_number']); ?></strong>.</p>
-        <?php endif; ?>
-    <?php endforeach; ?>
-<?php endif; ?>
-
-<form method="post" action="">
-    <button type="submit" name="export_csv">Export to CSV</button>
-</form>
+</div>
 
 <?php
 $conn->close();
 ?>
 
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script>
     document.getElementById('add-style').addEventListener('click', function() {
         const styleEntries = document.getElementById('style-entries');
         const newEntry = document.createElement('div');
-        newEntry.className = 'style-entry';
+        newEntry.className = 'style-entry mt-2';
         newEntry.innerHTML = ` 
             <label for="style_number">Style Number:</label>
-            <input type="text" name="style_number[]" required>
-            <label for="gold_weight">Gold Weight:</label>
-            <input type="text" name="gold_weight[]" required>
-            <label for="quantity">Quantity:</label>
-            <input type="text" name="quantity[]" required>
-            <label for="po">Purchase Order (PO):</label>
-            <input type="text" name="po[]" required>
-            <label for="factory">Factory:</label>
-            <input type="text" name="factory[]" required>
-            <label for="size">Size:</label>
-            <input type="text" name="size[]" required>
-            <label for="quality">Quality:</label>
-            <input type="text" name="quality[]" required>
+            <input type="text" name="style_number[]" class="form-control" required>
+            <label for="gold_weight" class="mt-2">Gold Weight:</label>
+            <select name="gold_weight[]" class="form-control" required>
+                <option value="">Select Gold Type</option>
+                <option value="14KY">14KY</option>
+                <option value="14KW">14KW</option>
+                <option value="14KR">14KR</option>
+                <option value="14TT">14TT</option>
+                <option value="18KY">18KY</option>
+                <option value="18KW">18KW</option>
+                <option value="18KR">18KR</option>
+                <option value="18K-TT">18K-TT</option>
+                <option value="PT-950">PT-950</option>
+            </select>
+            <label for="quantity" class="mt-2">Quantity:</label>
+            <input type="text" name="quantity[]" class="form-control" required>
+            <label for="po" class="mt-2">Purchase Order (PO):</label>
+            <input type="text" name="po[]" class="form-control" required>
+            <label for="factory" class="mt-2">Factory:</label>
+            <input type="text" name="factory[]" class="form-control" required>
+            <label for="size" class="mt-2">Size:</label>
+            <input type="text" name="size[]" class="form-control" required>
+            <label for="quality" class="mt-2">Quality:</label>
+            <select name="quality[]" class="form-control" required>
+                <option value="">Select Quality</option>
+                <option value="Natural">Natural</option>
+                <option value="Labgrown">Labgrown</option>
+            </select>
         `;
         styleEntries.appendChild(newEntry);
     });

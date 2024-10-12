@@ -88,13 +88,48 @@ $conn->close();
     <h2 class="text-white text-center">Dashboard</h2>
     <a href="index.php">Home</a>
     <a href="addbangle.php">Add Bangle</a>
-    <a href="view.php">All Bangles</a>
+    <a href="view.php">All bangles</a>
     <a href="req.php">Diamond requirement</a>
-    
 </div>
 
 <div class="main">
-    <h1>let's get started.</h1>
+    <h1>Add Bangle</h1>
+    <form method="post" id="bangleForm">
+        <div class="form-group">
+            <label for="style_number">Style Number:</label>
+            <input type="text" name="style_number" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="factory_style_number">Factory Style Number:</label>
+            <input type="text" name="factory_style_number" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label for="gold_weight">Gold Weight (grams):</label>
+            <input type="number" step="0.01" name="gold_weight" class="form-control" required>
+        </div>
+
+        <h3>Stones Information</h3>
+        <div id="stoneFields">
+            <div class="stone">
+                <label for="stone_type">Stone Type:</label>
+                <input type="text" name="stones[0][stone_type]" class="form-control" required>
+
+                <label for="quantity">Quantity:</label>
+                <input type="number" name="stones[0][quantity]" class="form-control" required>
+
+                <label for="size">Size:</label>
+                <input type="text" name="stones[0][size]" class="form-control" required>
+
+                <label for="weight">Weight (ct):</label>
+                <input type="number" step="0.01" name="stones[0][weight]" class="form-control" required>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-secondary mt-3" onclick="addStoneField()">Add More Stones</button><br><br>
+        <input type="submit" value="Add Bangle" class="btn btn-primary mt-3">
+    </form>
 </div>
 
 <script>

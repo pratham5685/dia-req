@@ -20,70 +20,141 @@ if ($conn->connect_error) {
 $sql = "SELECT * FROM bangles";
 $result = $conn->query($sql);
 
-// Check if any records were returned
-if ($result->num_rows > 0) {
-    // Start outputting the HTML
-    echo '<h1>Bangle Styles</h1>';
-    echo '<table border="1" cellspacing="0" cellpadding="10">';
-    echo '<tr>
-            <th>Style Number</th>
-            <th>Factory Style Number</th>
-            <th>Gold Weight (g)</th>
-            <th>Total Stone Quantity</th>
-            <th>Total Stone Weight (ct)</th>
-            <th>Stone Details</th>
-          </tr>';
-
-    // Iterate through each record
-    while ($row = $result->fetch_assoc()) {
-        // Decode the JSON for stone details
-        $stones = json_decode($row['stones'], true);
-        $stoneDetails = '';
-
-        // Prepare the stone details for display
-        if (!empty($stones) && is_array($stones)) {
-            $stoneDetails .= '<table border="1" cellspacing="0" cellpadding="5">
-                                <tr>
-                                    <th>Stone Type</th>
-                                    <th>Quantity</th>
-                                    <th>Size</th>
-                                    <th>Weight (ct)</th>
-                                </tr>';
-
-            foreach ($stones as $stone) {
-                // Check if required keys exist in the array
-                $stoneType = isset($stone['type']) ? htmlspecialchars($stone['type']) : 'N/A';
-                $stoneQty = isset($stone['qty']) ? htmlspecialchars($stone['qty']) : 'N/A';
-                $stoneSize = isset($stone['size']) ? htmlspecialchars($stone['size']) : 'N/A';
-                $stoneWeight = isset($stone['weight']) ? htmlspecialchars($stone['weight']) : 'N/A';
-
-                // Append each stone's details to the stoneDetails table
-                $stoneDetails .= "<tr>
-                                    <td>{$stoneType}</td>
-                                    <td>{$stoneQty}</td>
-                                    <td>{$stoneSize}</td>
-                                    <td>{$stoneWeight}</td>
-                                  </tr>";
-            }
-            $stoneDetails .= '</table>';
-        } else {
-            $stoneDetails = 'No stone details available';
-        }
-
-        // Output the main row data
-        echo "<tr>
-                <td>{$row['style_number']}</td>
-                <td>{$row['factory_style_number']}</td>
-                <td>{$row['gold_weight']}</td>
-                <td>{$row['total_stone_qty']}</td>
-                <td>{$row['total_stone_weight']}</td>
-                <td>{$stoneDetails}</td>
-              </tr>";
-    }
-    echo '</table>';
-} else {
-    echo 'No styles found.';
-}
-
-$conn->close();
+// Start outputting the HTML
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle Styles</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            height: 100%;
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #343a40;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px;
+            text-decoration: none;
+            display: block;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .main {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        h1 {
+            color: #343a40;
+        }
+        table {
+            margin-top: 20px;
+            width: 100%;
+        }
+        th, td {
+            text-align: left;
+        }
+        .stone-table {
+            margin-top: 10px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .stone-table th, .stone-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2 class="text-white text-center">Dashboard</h2>
+    <a href="index.php">Home</a>
+    <a href="addbangle.php">Add Bangle</a>
+    <a href="view.php">All bangles</a>
+    <a href="req.php">Diamond requirement</a>
+</div>
+
+<div class="main">
+    <h1>Bangle Styles</h1>
+
+    <?php if ($result->num_rows > 0): ?>
+        <table class="table table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Style Number</th>
+                    <th>Factory Style Number</th>
+                    <th>Gold Weight (g)</th>
+                    <th>Total Stone Quantity</th>
+                    <th>Total Stone Weight (ct)</th>
+                    <th>Stone Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <?php
+                    // Decode the JSON for stone details
+                    $stones = json_decode($row['stones'], true);
+                    $stoneDetails = '';
+                    
+                    // Prepare the stone details for display
+                    if (!empty($stones) && is_array($stones)) {
+                        $stoneDetails .= '<table class="stone-table">
+                                            <tr>
+                                                <th>Stone Type</th>
+                                                <th>Quantity</th>
+                                                <th>Size</th>
+                                                <th>Weight (ct)</th>
+                                            </tr>';
+
+                        foreach ($stones as $stone) {
+                            $stoneType = htmlspecialchars($stone['stone_type'] ?? 'N/A');
+                            $stoneQty = htmlspecialchars($stone['quantity'] ?? 'N/A');
+                            $stoneSize = htmlspecialchars($stone['size'] ?? 'N/A');
+                            $stoneWeight = htmlspecialchars($stone['weight'] ?? 'N/A');
+
+                            $stoneDetails .= "<tr>
+                                                <td>{$stoneType}</td>
+                                                <td>{$stoneQty}</td>
+                                                <td>{$stoneSize}</td>
+                                                <td>{$stoneWeight}</td>
+                                              </tr>";
+                        }
+                        $stoneDetails .= '</table>';
+                    } else {
+                        $stoneDetails = 'No stone details available';
+                    }
+                    ?>
+
+                    <tr>
+                        <td><?= htmlspecialchars($row['style_number']) ?></td>
+                        <td><?= htmlspecialchars($row['factory_style_number']) ?></td>
+                        <td><?= htmlspecialchars($row['gold_weight']) ?></td>
+                        <td><?= htmlspecialchars($row['total_stone_qty']) ?></td>
+                        <td><?= htmlspecialchars($row['total_stone_weight']) ?></td>
+                        <td><?= $stoneDetails ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <p>No styles found.</p>
+    <?php endif; ?>
+
+    <?php $conn->close(); ?>
+</div>
+
+</body>
+</html>
